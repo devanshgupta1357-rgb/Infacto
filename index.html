@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infacto - Scroll Animation</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "spacing": {
+                        "stack-lg": "48px",
+                        "unit": "8px",
+                        "stack-md": "24px",
+                        "margin-mobile": "24px",
+                        "container-max": "1280px",
+                        "gutter": "32px",
+                        "margin-desktop": "64px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Libre Caslon Text"],
+                        "label-md": ["Work Sans"],
+                        "display-lg": ["Libre Caslon Text"],
+                        "headline-lg-mobile": ["Libre Caslon Text"],
+                        "body-md": ["Work Sans"],
+                        "label-lg": ["Work Sans"],
+                        "headline-sm": ["Libre Caslon Text"],
+                        "body-lg": ["Work Sans"],
+                        "headline-md": ["Libre Caslon Text"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            scroll-behavior: smooth;
+        }
+
+        /* Create exactly enough scrolling room for the scrubber */
+        .scrolly-container {
+            height: 500vh;
+        }
+
+        /* 
+         * Sticky wrapper stays on screen.
+         * Display flex centers the canvas in the viewport.
+         */
+        #canvas-wrapper {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        #animation-canvas {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
+
+        /* Simple loading overlay */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-family: sans-serif;
+            transition: opacity 0.5s ease-out;
+        }
+
+        #loader-bar {
+            width: 200px;
+            height: 4px;
+            background: #333;
+            margin-top: 20px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        #loader-progress {
+            width: 0%;
+            height: 100%;
+            background: #fff;
+            transition: width 0.1s;
+        }
+
+        /* Typography & Image Animation */
+        #about-infacto .infacto-title,
+        #about-infacto .infacto-desc,
+        #about-infacto #about-infacto-img {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 1s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        
+        #about-infacto .infacto-desc {
+            transition-delay: 0.2s;
+        }
+
+        #about-infacto #about-infacto-img {
+            transition-delay: 0.4s;
+        }
+        
+        /* Reveal states */
+        #about-infacto.visible .infacto-title,
+        #about-infacto.visible .infacto-desc,
+        #about-infacto.visible #about-infacto-img {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Final Essay Reveal */
+        #socrates-essay p.socrates-essay-text {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 2s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        #socrates-essay.visible p.socrates-essay-text {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Generic Transparent Navigation Bar -->
+    <nav class="fixed top-0 left-0 w-full z-50 flex items-center justify-end py-4 px-4 md:py-6 md:px-12 bg-transparent pointer-events-none">
+        <div class="flex flex-wrap items-center justify-end gap-2 md:gap-4 lg:gap-8 pointer-events-auto drop-shadow-md">
+            <ul class="flex items-center space-x-3 md:space-x-8">
+                <li><a href="#about-infacto" class="text-white/80 text-[11px] md:text-base font-medium hover:text-white transition-colors duration-200 font-body-lg uppercase tracking-wider">About</a></li>
+                <li><a href="#gemini-feature" class="text-white/80 text-[11px] md:text-base font-medium hover:text-white transition-colors duration-200 font-body-lg uppercase tracking-wider">Theme</a></li>
+                <li><a href="#footer-cta" class="text-white/80 text-[11px] md:text-base font-medium hover:text-white transition-colors duration-200 font-body-lg uppercase tracking-wider">Contact</a></li>
+            </ul>
+            <div class="flex items-center space-x-3 md:space-x-4 border-l border-white/20 pl-3 md:pl-8">
+                <a href="login.html" class="text-white/80 text-[11px] md:text-base font-medium hover:text-white transition-colors duration-200 font-body-lg uppercase tracking-wider">Login</a>
+                <a href="register.html" class="bg-white text-black px-3 md:px-5 py-1.5 md:py-2 rounded text-[11px] md:text-base font-bold hover:bg-gray-200 transition-colors duration-200 font-body-lg uppercase tracking-wide">Register</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Loading Screen -->
+    <div id="loader">
+        <h2 style="margin: 0;">Loading Infacto Animation...</h2>
+        <div id="loader-bar"><div id="loader-progress"></div></div>
+    </div>
+
+    <!-- Scroll Content -->
+    <div class="scrolly-container">
+        <div id="canvas-wrapper">
+            <canvas id="animation-canvas" width="1280" height="720"></canvas>
+        </div>
+    </div>
+
+    <!-- Rest of content hidden until animation completes -->
+    <div id="locked-content" class="hidden opacity-0 transition-opacity duration-[1500ms] w-full">
+
+    <!-- New Content Section using Stitch components -->
+    <section id="about-infacto" class="relative w-full flex items-center overflow-hidden bg-[#000000] mt-8 md:mt-16 pb-12 md:pb-16 px-6 md:px-12 scroll-mt-24 md:scroll-mt-32">
+        <div class="relative z-10 w-full max-w-container-max mx-auto flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
+            <div class="flex-1 max-w-2xl text-left">
+                <h1 class="infacto-title font-headline-lg text-3xl sm:text-4xl md:text-5xl lg:text-[56px] text-[#FFFFFF] leading-tight font-bold mb-6 md:mb-12">What is Infacto?</h1>
+                <p class="infacto-desc font-body-lg text-base sm:text-lg md:text-xl text-[#D1D5DB] leading-relaxed m-0 text-justify md:text-left">
+                    Infacto is the flagship debating event of the Orator Club, IIIT Nagpur. It is an inter-college debate competition open to students from colleges across the country, bringing together teams to compete in a fast-paced test of argumentation, logic, adaptability, and public speaking. With 2-member teams and an Oxford-style debate format, Infacto goes beyond conventional debating. Participants are not merely tested on how well they can prepare an argument—they are challenged to respond to their opponents, identify weaknesses in their reasoning, and defend their position under pressure. With 70 teams participating in the previous edition, Infacto aims to create a competitive yet intellectually engaging environment where every debate becomes a battle of ideas.
+                </p>
+            </div>
+            <div class="flex-shrink-0 w-full md:w-[450px] lg:w-[500px]">
+                <img id="about-infacto-img" src="gemini_side_new.png" alt="Infacto Illustration" class="w-full h-auto object-contain rounded-lg shadow-2xl">
+            </div>
+        </div>
+    </section>
+
+    <!-- Gemini Feature Image Section -->
+    <section id="gemini-feature" class="relative w-full overflow-hidden bg-[#000000] mt-12 md:mt-24 scroll-mt-24 px-4 md:px-0">
+        <div class="relative w-full flex items-center justify-center pointer-events-none max-w-[1920px] mx-auto">
+            <img src="final_banner.png" alt="Infacto Extra Feature" class="w-full h-auto object-cover rounded-xl md:rounded-none max-w-[1920px]">
+        </div>
+    </section>
+
+    <!-- Final Socrates Essay Section -->
+    <section id="socrates-essay" class="relative w-full min-h-[50vh] flex items-center overflow-hidden bg-[#000000] mt-8 md:mt-16 pb-8 md:pb-12 px-6 md:px-12">
+        <div class="relative z-10 w-full max-w-container-max mx-auto text-left">
+            <p class="socrates-essay-text font-body-lg text-base sm:text-lg md:text-xl text-[#D1D5DB] leading-relaxed m-0 text-justify md:text-left">
+                When Athens condemned Socrates to drink the hemlock, it did not merely kill a man — it revealed what a society does when questioning becomes unbearable to it. Socrates' crime was never blasphemy or corrupting the youth in any literal sense; his true offense was refusing to let any idea, however sacred, go unexamined. He was executed not for having answers but for insisting on the question. And in that sense, the death of Socrates was the first great symbol of philosophy's fate in every age since: a civilization can tolerate an idea, but it rarely tolerates the relentless interrogation of its ideas. Today that same hemlock is administered more slowly, and more quietly — not through trial and execution, but through distraction, through the noise of endless information mistaken for discourse, through a culture that prizes the speed of an opinion over the patience of a question. Philosophy has not been outlawed; it has simply been starved of the silence and the conflict it needs to breathe. Socrates died because Athens could not bear to keep questioning itself. We, perhaps, are dying more slowly — not because we were forced to stop asking, but because we chose, almost without noticing, to stop.
+            </p>
+        </div>
+    </section>
+
+    <!-- Infacto 5.0 Section -->
+    <section id="infacto-5" class="relative w-full overflow-hidden bg-[#000000] mt-4 md:mt-8 pb-16 md:pb-24 px-6 md:px-12 scroll-mt-24 md:scroll-mt-32">
+        <div class="relative z-10 w-full max-w-container-max mx-auto flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 scroll-animate-up" style="opacity: 0; transform: translateY(50px); transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1), transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);">
+            <div class="flex-1 max-w-2xl text-left">
+                <h1 class="infacto-title font-headline-lg text-3xl sm:text-4xl md:text-5xl lg:text-[56px] text-[#FFFFFF] leading-tight font-bold mb-6 md:mb-12">
+                    Infacto 5.0
+                </h1>
+                <p class="infacto-desc font-body-lg text-base sm:text-lg md:text-xl text-[#D1D5DB] leading-relaxed m-0 text-justify md:text-left">
+                    Infacto 5.0 marks a deliberate departure from the tradition the event has followed so far. Where previous editions centered the debate squarely on geopolitics, this edition refuses to be confined to that single lens. Infacto 5.0 broadens its horizons, opening the floor to both political and philosophical discourse — inviting participants not just to argue over policy and power, but to grapple with the deeper questions of ideas, ethics, and thought that underpin them. It's a leap forward for the event, signaling that Infacto is no longer just a stage for political debate, but a space for wider intellectual exploration. This shift reflects a belief that the sharpest arguments don't emerge from politics alone — they emerge when political reasoning is tested against philosophical scrutiny, and when abstract ideas are pressure-tested against real-world consequence. In expanding its scope, Infacto 5.0 challenges debaters to move beyond rehearsed positions and engage with questions that don't have easy, pre-packaged answers.
+                </p>
+            </div>
+            <div class="flex-shrink-0 w-full md:w-[450px] lg:w-[500px]">
+                <img src="infacto_5_img.png" alt="Infacto 5.0 Thematic Element" class="w-full h-auto object-contain rounded-lg shadow-2xl">
+            </div>
+        </div>
+    </section>
+
+    <!-- Brochure Section -->
+    <section id="brochure" class="relative w-full overflow-hidden bg-[#000000] mt-8 md:mt-16 pb-16 md:pb-24 px-6 md:px-12 scroll-mt-24 md:scroll-mt-32">
+        <div class="relative z-10 w-full max-w-container-max mx-auto text-left flex flex-col scroll-animate-up" style="opacity: 0; transform: translateY(50px); transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1), transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);">
+            <h1 class="infacto-title font-headline-lg text-3xl sm:text-4xl md:text-5xl lg:text-[56px] text-[#FFFFFF] leading-tight font-bold mb-6 md:mb-12">
+                Brochure
+            </h1>
+            <div class="w-full relative rounded-lg shadow-2xl overflow-hidden bg-[#111111]" style="padding-bottom: 56.25%;">
+                <iframe src="https://zenflip.io/view//trmun-background-guide-constituent-assembly-msprfhgp?theme=dark" class="absolute top-0 left-0 w-full h-full border-0" style="color-scheme: dark;" seamless="seamless" scrolling="no" allowtransparency="true" allowfullscreen="true" allow="autoplay; clipboard-read; clipboard-write"></iframe>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action & Contact -->
+    <section id="footer-cta" class="relative w-full overflow-hidden bg-[#000000] pb-32 pt-16 px-6 md:px-12 scroll-mt-24">
+        <div class="max-w-4xl mx-auto flex flex-col items-center text-center gap-16 md:gap-24">
+            <!-- Big Register Now Button -->
+            <div class="scroll-animate-up w-full" style="opacity:0; transform: translateY(50px);">
+                <a href="register.html" class="inline-block border-[2px] border-white text-white font-headline-lg font-bold text-2xl md:text-5xl px-12 py-5 md:px-20 md:py-8 uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-500 hover:scale-[1.02] shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:shadow-[0_0_40px_rgba(255,255,255,0.3)]">
+                    Register Now
+                </a>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="flex flex-col items-center gap-8 text-white/50 font-body-lg scroll-animate-up w-full" style="opacity:0; transform: translateY(50px); transition-delay: 0.2s;">
+                <p class="text-xs md:text-sm font-medium uppercase tracking-[0.4em] text-white/30">Contact Information</p>
+                
+                <div class="flex flex-col md:flex-row items-center justify-center gap-12 md:gap-32 w-full mt-2">
+                    <!-- Contact 1 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <p class="text-2xl md:text-3xl font-headline-lg text-white mb-1">Devansh Gupta</p>
+                        <a href="tel:+919772562418" class="text-lg md:text-xl hover:text-white transition-colors duration-300">9772562418</a>
+                        <a href="mailto:devanshgupta1357@gmail.com" class="text-lg md:text-xl hover:text-white transition-colors duration-300">devanshgupta1357@gmail.com</a>
+                    </div>
+                    
+                    <!-- Contact 2 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <p class="text-2xl md:text-3xl font-headline-lg text-white mb-1">Rudraksh Gupta</p>
+                        <a href="tel:+917060109792" class="text-lg md:text-xl hover:text-white transition-colors duration-300">7060109792</a>
+                        <a href="mailto:bt25csd049@gmail.com" class="text-lg md:text-xl hover:text-white transition-colors duration-300">bt25csd049@gmail.com</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    </div><!-- End Locked Content -->
+
+    <script>
+        const canvas = document.getElementById('animation-canvas');
+        const ctx = canvas.getContext('2d');
+        const startFrame = 24; // Trimmed 8 frames
+        const endFrame = 183;
+        const frameCount = endFrame - startFrame + 1;
+        const images = [];
+        let imagesLoaded = 0;
+
+        // Zero-padding helper
+        const pad = (num, size) => {
+            let s = num + "";
+            while (s.length < size) s = "0" + s;
+            return s;
+        };
+
+        let targetFrameIndex = 0;
+        let currentFrameIndex = 0;
+        let lastDrawnFrame = -1;
+
+        const renderLoop = () => {
+            // Apply smoothing dampening
+            currentFrameIndex += (targetFrameIndex - currentFrameIndex) * 0.1;
+            const frameToDraw = Math.round(currentFrameIndex);
+            
+            if (frameToDraw !== lastDrawnFrame) {
+                drawFrame(frameToDraw);
+                lastDrawnFrame = frameToDraw;
+                
+                // Unlock the rest of the page natively ONLY once scrubbing concludes
+                if (frameToDraw >= frameCount - 2) {
+                    const locked = document.getElementById('locked-content');
+                    if (locked && locked.classList.contains('hidden')) {
+                        locked.classList.remove('hidden');
+                        requestAnimationFrame(() => locked.classList.remove('opacity-0'));
+                    }
+                }
+            }
+            requestAnimationFrame(renderLoop);
+        };
+
+        const loadImages = () => {
+            const progressBar = document.getElementById('loader-progress');
+            
+            for (let i = startFrame; i <= endFrame; i++) {
+                const img = new Image();
+                // Load frames e.g. "ezgif-frame-016.png"
+                img.src = `ezgif-frame-${pad(i, 3)}.png`;
+                
+                img.onload = () => {
+                    imagesLoaded++;
+                    progressBar.style.width = `${(imagesLoaded / frameCount) * 100}%`;
+                    
+                    if (imagesLoaded === frameCount) {
+                        // All images loaded
+                        document.getElementById('loader').style.opacity = '0';
+                        setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+                        
+                        // Kick off smooth render loop
+                        renderLoop();
+                    }
+                };
+                
+                img.onerror = () => {
+                    console.error('Failed to load frame:', img.src);
+                    imagesLoaded++;
+                };
+                
+                images.push(img);
+            }
+        };
+
+        const drawFrame = (index) => {
+            if (images[index]) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(images[index], 0, 0);
+            }
+        };
+
+        // Atmospheric Audio Logic
+        const atmosphericAudio = new Audio('whatsapp_audio.mpeg');
+        atmosphericAudio.loop = true;
+        atmosphericAudio.volume = 0.5; // Smooth volume
+        let soundIsEnabled = false;
+        let scrollTimeout = null;
+
+        const soundToggle = document.createElement('button');
+        soundToggle.innerHTML = '<span style="font-size: 14px;">🔇</span>';
+        soundToggle.style.position = 'fixed';
+        soundToggle.style.bottom = '20px';
+        soundToggle.style.left = '20px';
+        soundToggle.style.zIndex = '9999';
+        soundToggle.style.padding = '8px';
+        soundToggle.style.minWidth = '36px';
+        soundToggle.style.height = '36px';
+        soundToggle.style.display = 'flex';
+        soundToggle.style.alignItems = 'center';
+        soundToggle.style.justifyContent = 'center';
+        soundToggle.style.background = 'rgba(0, 0, 0, 0.4)';
+        soundToggle.style.color = '#fff';
+        soundToggle.style.border = '1px solid rgba(255,255,255,0.1)';
+        soundToggle.style.borderRadius = '50%';
+        soundToggle.style.cursor = 'pointer';
+        soundToggle.style.transition = 'all 0.3s ease';
+
+        soundToggle.onmouseenter = () => soundToggle.style.background = 'rgba(0, 0, 0, 0.9)';
+        soundToggle.onmouseleave = () => soundToggle.style.background = 'rgba(0, 0, 0, 0.4)';
+
+        let isHeroInView = true;
+
+        soundToggle.onclick = () => {
+            if (!soundIsEnabled) {
+                if (isHeroInView) { // Only play if hero is in view
+                    atmosphericAudio.play().catch(console.error);
+                }
+                soundToggle.innerHTML = '<span style="font-size: 14px;">🔊</span>';
+                soundIsEnabled = true;
+            } else {
+                atmosphericAudio.pause();
+                soundToggle.innerHTML = '<span style="font-size: 14px;">🔇</span>';
+                soundIsEnabled = false;
+            }
+        };
+        document.body.appendChild(soundToggle);
+
+        // Scroll listener mapping scroll % to frame index
+        window.addEventListener('scroll', () => {
+            // Scroll fraction from 0 to 1
+            const html = document.documentElement;
+            // Subtract viewport height from total scroll height to get max scrollable area
+            const maxScrollTop = html.scrollHeight - window.innerHeight; 
+            const scrollFraction = window.scrollY / Math.max(1, maxScrollTop);
+            
+            // Map fraction to floating frame index (0 to frameCount-1)
+            targetFrameIndex = Math.min(
+                frameCount - 1,
+                Math.max(0, scrollFraction * (frameCount - 1))
+            );
+        });
+
+        // Initialize loading
+        loadImages();
+
+        // Intersection Observer logic to limit sound and trigger typography animation
+        const scrollyContainer = document.querySelector('.scrolly-container');
+        const aboutSection = document.getElementById('about-infacto');
+
+        const observerOptions = {
+            root: null,
+            threshold: 0.1
+        };
+
+        const heroObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                isHeroInView = entry.isIntersecting;
+                if (!isHeroInView && soundIsEnabled) {
+                    // Force pause when leaving hero
+                    atmosphericAudio.pause();
+                } else if (isHeroInView && soundIsEnabled) {
+                    // Auto-resume when entering hero if toggled ON
+                    atmosphericAudio.play().catch(e => {});
+                }
+            });
+        }, observerOptions);
+        heroObserver.observe(scrollyContainer);
+
+        const aboutObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+        aboutObserver.observe(aboutSection);
+        aboutObserver.observe(document.getElementById('socrates-essay'));
+
+
+        // Vanilla JS Port: Pixel Cursor Trail
+        const PIXEL_SIZE = 12;
+        const TRAIL_LENGTH = 40;
+        const FADE_SPEED = 0.04;
+        
+        let pixelTrail = [];
+        let globalPixelId = 0;
+        let pLastPosition = { x: 0, y: 0 };
+        
+        const pixelContainer = document.createElement('div');
+        pixelContainer.style.position = 'fixed';
+        pixelContainer.style.inset = '0';
+        pixelContainer.style.width = '100vw';
+        pixelContainer.style.height = '100vh';
+        pixelContainer.style.overflow = 'hidden';
+        pixelContainer.style.pointerEvents = 'none';
+        pixelContainer.style.zIndex = '9998'; // Keep under loading screen
+        document.body.appendChild(pixelContainer);
+        
+        window.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+        
+            const dx = x - pLastPosition.x;
+            const dy = y - pLastPosition.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+        
+            if (distance > PIXEL_SIZE) {
+                const el = document.createElement('div');
+                el.style.position = 'absolute';
+                el.style.backgroundColor = '#ffffff';
+                el.style.pointerEvents = 'none';
+        
+                pixelContainer.appendChild(el);
+        
+                pixelTrail.push({
+                    id: globalPixelId++,
+                    x,
+                    y,
+                    opacity: 1,
+                    age: 0,
+                    element: el
+                });
+        
+                if (pixelTrail.length > TRAIL_LENGTH) {
+                    const oldP = pixelTrail.shift();
+                    if (oldP.element.parentNode) {
+                        oldP.element.parentNode.removeChild(oldP.element);
+                    }
+                }
+                
+                pLastPosition = { x, y };
+            }
+        });
+        
+        const animateTrail = () => {
+            pixelTrail.forEach((pixel) => {
+                pixel.opacity -= FADE_SPEED;
+                pixel.age += 1;
+        
+                if (pixel.opacity > 0) {
+                    const sizeMultiplier = Math.max(0.3, 1 - pixel.age / 100);
+                    const currentSize = PIXEL_SIZE * sizeMultiplier;
+                    
+                    pixel.element.style.left = `${pixel.x - currentSize / 2}px`;
+                    pixel.element.style.top = `${pixel.y - currentSize / 2}px`;
+                    pixel.element.style.width = `${currentSize}px`;
+                    pixel.element.style.height = `${currentSize}px`;
+                    pixel.element.style.opacity = pixel.opacity;
+                }
+            });
+        
+            pixelTrail = pixelTrail.filter(p => {
+                if (p.opacity <= 0) {
+                    if (p.element.parentNode) p.element.parentNode.removeChild(p.element);
+                    return false;
+                }
+                return true;
+            });
+        
+            requestAnimationFrame(animateTrail);
+        };
+        requestAnimationFrame(animateTrail);
+
+        // Advanced Text Cursor Proximity Scale (Vanilla JS Optimized for mass typography)
+        const applyTextCursorProximity = (selector, radius = 80, maxScale = 1.5) => {
+            const els = document.querySelectorAll(selector);
+            if (!els.length) return;
+            
+            const allChars = [];
+            
+            els.forEach(el => {
+                const text = el.innerText;
+                el.innerHTML = '';
+                
+                // Group by word to preserve natural text wrapping
+                const words = text.split(/(\s+)/);
+                
+                words.forEach(word => {
+                    if (word.trim() === '') {
+                        el.appendChild(document.createTextNode(word));
+                    } else {
+                        const wordSpan = document.createElement('span');
+                        wordSpan.style.display = 'inline-block';
+                        wordSpan.style.whiteSpace = 'nowrap';
+                        
+                        for (let i = 0; i < word.length; i++) {
+                            const charSpan = document.createElement('span');
+                            charSpan.innerText = word[i];
+                            charSpan.style.display = 'inline-block';
+                            charSpan.style.transition = 'transform 0.1s ease-out';
+                            charSpan.style.transformOrigin = 'center bottom';
+                            wordSpan.appendChild(charSpan);
+                            allChars.push(charSpan);
+                        }
+                        el.appendChild(wordSpan);
+                    }
+                });
+            });
+            
+            // Cache static document offsets to eliminate layout thrashing
+            let charCoords = [];
+            const cacheCoords = () => {
+                charCoords = allChars.map(span => {
+                    const rect = span.getBoundingClientRect();
+                    return {
+                        span,
+                        x: rect.left + rect.width / 2,
+                        y: rect.top + window.scrollY + rect.height / 2
+                    };
+                });
+            };
+            
+            // Initialize bounds and recalculate on dynamic reflows
+            setTimeout(cacheCoords, 500);
+            window.addEventListener('resize', cacheCoords);
+            window.addEventListener('scroll', cacheCoords); 
+            
+            let ticking = false;
+            let mouseX = 0;
+            let mouseY = 0;
+            
+            window.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY + window.scrollY;
+                
+                if (!ticking) {
+                    requestAnimationFrame(() => {
+                        charCoords.forEach(({span, x, y}) => {
+                            const dist = Math.sqrt(Math.pow(mouseX - x, 2) + Math.pow(mouseY - y, 2));
+                            if (dist < radius) {
+                                const scale = 1 + (maxScale - 1) * (1 - dist / radius);
+                                span.style.transform = `scale(${scale})`;
+                                span.style.zIndex = 10;
+                            } else {
+                                span.style.transform = `scale(1)`;
+                                span.style.zIndex = 1;
+                            }
+                        });
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            });
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Apply scale logic across all main text bodies smoothly
+            applyTextCursorProximity('.infacto-title', 100, 1.8);
+            applyTextCursorProximity('.infacto-desc', 90, 1.6);
+            applyTextCursorProximity('.socrates-essay-text', 90, 1.6);
+            
+            // Native Intersection Observer for fade/slide up scroll reveal animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                        observer.unobserve(entry.target); // Trigger only once
+                    }
+                });
+            }, { 
+                threshold: 0.15,
+                rootMargin: '0px 0px -50px 0px' 
+            });
+
+            document.querySelectorAll('.scroll-animate-up').forEach(el => observer.observe(el));
+        });
+
+    </script>
+</body>
+</html>
